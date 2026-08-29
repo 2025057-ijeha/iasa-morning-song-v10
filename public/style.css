@@ -682,3 +682,51 @@ footer{margin-top:72px;background:#18221b;color:#fff;padding:28px 0}
     grid-template-columns:1fr 1fr;
   }
 }
+
+/* v10 관리자 게시판 관리 */
+.admin-tabs{
+  display:flex;gap:7px;width:max-content;max-width:100%;padding:6px;margin:4px 0 10px;
+  border-radius:16px;background:#eaf2e7;overflow:auto;
+}
+.admin-tab{
+  border:0;background:transparent;color:#69766b;border-radius:11px;padding:10px 15px;
+  font-size:12px;font-weight:900;white-space:nowrap;cursor:pointer;
+}
+.admin-tab.active{background:#fff;color:#2f7542;box-shadow:0 5px 16px rgba(60,95,67,.10)}
+.admin-board-summary{grid-template-columns:repeat(3,minmax(0,190px))}
+.admin-board-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.admin-board-card{
+  min-width:0;background:#fff;border-radius:22px;padding:21px;
+  box-shadow:0 12px 34px rgba(60,95,67,.08);transition:transform .18s ease,box-shadow .18s ease;
+}
+.admin-board-card:hover{transform:translateY(-2px);box-shadow:0 16px 38px rgba(60,95,67,.11)}
+.admin-board-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.admin-board-card-top>div{min-width:0}
+.admin-board-date{font-size:11px;color:#8a958b}
+.admin-board-card h3{margin:7px 0 0;font-size:18px;letter-spacing:-.025em;color:var(--ink);overflow-wrap:anywhere}
+.admin-board-content{
+  margin:15px 0;color:#566158;font-size:13px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;
+}
+.admin-board-meta{display:flex;gap:7px;flex-wrap:wrap}
+.admin-board-meta span{font-size:11px;padding:6px 9px;border-radius:999px;background:#f2f7f0;color:#617064;font-weight:750}
+.admin-board-modal-card{max-width:760px;max-height:88vh;overflow:auto}
+.admin-board-modal-card textarea{resize:vertical;min-height:145px}
+.admin-comments-manage{margin-top:28px;padding-top:22px;border-top:1px solid #e8eee6}
+.admin-comments-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:11px}
+.admin-comments-head strong{font-size:14px;color:#3d4b40}
+.admin-comments-head span{font-size:11px;color:#879188}
+.admin-comments-list{display:flex;flex-direction:column;gap:8px}
+.admin-comment-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;background:#f7faf5;border-radius:13px;padding:12px 13px}
+.admin-comment-row>div{min-width:0}
+.admin-comment-row p{margin:0;color:#455147;font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+.admin-comment-row span{display:block;margin-top:5px;color:#929b93;font-size:10px}
+.admin-comment-delete{flex:0 0 auto;border:0;border-radius:9px;padding:7px 9px;background:#fff0ee;color:#ad4036;font-size:11px;font-weight:900;cursor:pointer}
+.admin-no-comments{padding:18px;text-align:center;background:#f8faf7;border-radius:12px;color:#8b958c;font-size:12px}
+@media(max-width:760px){
+  .admin-board-list{grid-template-columns:1fr}
+  .admin-board-summary{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:520px){
+  .admin-board-summary{grid-template-columns:1fr}
+}

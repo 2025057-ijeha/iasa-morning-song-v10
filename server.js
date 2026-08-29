@@ -81,6 +81,31 @@ app.delete("/api/admin/requests/:id",requireAdmin,asyncRoute(async(req,res)=>{
   res.json({ok:true,deleted:publicRequest(deleted)});
 }));
 
+/* ---------- 관리자 게시판 관리 ---------- */
+app.get("/api/admin/posts",requireAdmin,asyncRoute(async(req,res)=>{
+  const rows=await storage.listPosts();
+  res.json(rows.map(publicPost));
+}));
+app.put("/api/admin/posts/:id",requireAdmin,asyncRoute(async(req,res)=>{
+  const title=clean(req.body.title),content=clean(req.body.content);
+  if(!title||!content)return res.status(400).json({message:"제목과 내용을 모두 입력해주세요."});
+  if(title.length>120)return res.status(400).json({message:"제목은 120자 이하로 입력해주세요."});
+  if(content.length>5000)return res.status(400).json({message:"내용은 5000자 이하로 입력해주세요."});
+  const updated=await storage.updatePost(req.params.id,{title,content});
+  if(!updated)return res.status(404).json({message:"게시글을 찾을 수 없습니다."});
+  res.json({ok:true,post:publicPost(updated)});
+}));
+app.delete("/api/admin/posts/:id",requireAdmin,asyncRoute(async(req,res)=>{
+  const deleted=await storage.deletePost(req.params.id);
+  if(!deleted)return res.status(404).json({message:"게시글을 찾을 수 없습니다."});
+  res.json({ok:true});
+}));
+app.delete("/api/admin/posts/:postId/comments/:commentId",requireAdmin,asyncRoute(async(req,res)=>{
+  const deleted=await storage.deleteComment(req.params.postId,req.params.commentId);
+  if(!deleted)return res.status(404).json({message:"댓글을 찾을 수 없습니다."});
+  res.json({ok:true});
+}));
+
 app.use(express.static(path.join(__dirname,"public")));
 
 function isHttpUrl(value){try{const u=new URL(value);return u.protocol==="http:"||u.protocol==="https:";}catch{return false;}}

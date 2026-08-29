@@ -188,6 +188,31 @@ const storage = {
     return {id:rows[0].id,content:rows[0].content,createdAt:rows[0].created_at};
   },
 
+  async updatePost(id, changes) {
+    if (!useSupabase) {
+      const posts=readJson(POSTS_FILE,[]),idx=posts.findIndex(x=>String(x.id)===String(id));
+      if(idx<0)return null;
+      posts[idx]={...posts[idx],title:changes.title,content:changes.content};
+      writeJson(POSTS_FILE,posts);return posts[idx];
+    }
+    const rows=await sbResult(supabase.from("posts").update({title:changes.title,content:changes.content}).eq("id",id).select("*"));
+    if(!rows[0])return null;
+    return await this.getPost(id);
+  },
+
+  async deleteComment(postId, commentId) {
+    if (!useSupabase) {
+      const posts=readJson(POSTS_FILE,[]),post=posts.find(x=>String(x.id)===String(postId));
+      if(!post)return null;
+      post.comments=Array.isArray(post.comments)?post.comments:[];
+      const idx=post.comments.findIndex(x=>String(x.id)===String(commentId));
+      if(idx<0)return null;
+      const [deleted]=post.comments.splice(idx,1);writeJson(POSTS_FILE,posts);return deleted;
+    }
+    const rows=await sbResult(supabase.from("comments").delete().eq("id",commentId).eq("post_id",postId).select("*"));
+    return rows[0]||null;
+  },
+
   async deletePost(id) {
     if (!useSupabase) {
       const posts=readJson(POSTS_FILE,[]),idx=posts.findIndex(x=>String(x.id)===String(id));if(idx<0)return null;

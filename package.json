@@ -1,8 +1,8 @@
 {
   "name": "iasa-morning-song",
-  "version": "10.0.0",
+  "version": "10.1.0",
   "private": true,
-  "description": "IASA 기상곡 신청 + Supabase 영구 저장 + 무료 브라우저 AI + 관리자",
+  "description": "IASA 기상곡 신청 + Supabase 영구 저장 + 무료 브라우저 AI + 관리자 게시판 관리",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

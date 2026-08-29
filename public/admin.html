@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>IASA 기상곡 관리자</title>
+  <title>IASA 관리자</title>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body class="admin-page">
@@ -22,7 +22,7 @@
       <div class="admin-login-icon">A</div>
       <div class="eyebrow">ADMIN ACCESS</div>
       <h1>관리자 로그인</h1>
-      <p>기상곡 신청 내역을 관리하려면 관리자 비밀번호를 입력해주세요.</p>
+      <p>기상곡 신청과 익명 게시판을 관리하려면 관리자 비밀번호를 입력해주세요.</p>
       <form id="loginForm" class="admin-login-form">
         <div class="admin-password-wrap">
           <span class="admin-password-label">관리자 비밀번호</span>
@@ -38,8 +38,8 @@
       <div class="admin-toolbar">
         <div>
           <div class="eyebrow">ADMIN DASHBOARD</div>
-          <h1>신청곡 관리</h1>
-          <p>전체 신청 내역을 날짜·순서별로 확인할 수 있습니다.</p>
+          <h1 id="adminTitle">신청곡 관리</h1>
+          <p id="adminSubtitle">전체 신청 내역을 날짜·순서별로 확인하고 수정할 수 있습니다.</p>
         </div>
         <div class="admin-toolbar-actions">
           <input id="searchInput" type="search" placeholder="날짜, 이름, 곡, 가수 검색">
@@ -48,23 +48,54 @@
         </div>
       </div>
 
-      <div class="admin-summary">
-        <div class="admin-stat-card">
-          <span class="admin-stat-label">전체 신청</span>
-          <div class="admin-stat-row"><strong id="totalCount">0</strong><em>곡</em></div>
-        </div>
-        <div class="admin-stat-card">
-          <span class="admin-stat-label">오늘 신청</span>
-          <div class="admin-stat-row"><strong id="todayCount">0</strong><em>곡</em></div>
-        </div>
+      <div class="admin-tabs" role="tablist" aria-label="관리 메뉴">
+        <button id="requestTab" class="admin-tab active" type="button">기상곡 신청 관리</button>
+        <button id="boardTab" class="admin-tab" type="button">게시판 관리</button>
       </div>
 
-      <div id="adminEmpty" class="admin-empty hidden">
-        <div class="admin-empty-mark">♪</div>
-        <strong>아직 신청된 곡이 없습니다</strong>
-        <span>학생들이 신청한 기상곡이 이곳에 표시됩니다.</span>
-      </div>
-      <div id="adminList" class="admin-list"></div>
+      <section id="requestView">
+        <div class="admin-summary">
+          <div class="admin-stat-card">
+            <span class="admin-stat-label">전체 신청</span>
+            <div class="admin-stat-row"><strong id="totalCount">0</strong><em>곡</em></div>
+          </div>
+          <div class="admin-stat-card">
+            <span class="admin-stat-label">오늘 신청</span>
+            <div class="admin-stat-row"><strong id="todayCount">0</strong><em>곡</em></div>
+          </div>
+        </div>
+
+        <div id="adminEmpty" class="admin-empty hidden">
+          <div class="admin-empty-mark">♪</div>
+          <strong>아직 신청된 곡이 없습니다</strong>
+          <span>학생들이 신청한 기상곡이 이곳에 표시됩니다.</span>
+        </div>
+        <div id="adminList" class="admin-list"></div>
+      </section>
+
+      <section id="boardView" class="hidden">
+        <div class="admin-summary admin-board-summary">
+          <div class="admin-stat-card">
+            <span class="admin-stat-label">전체 게시글</span>
+            <div class="admin-stat-row"><strong id="postCount">0</strong><em>개</em></div>
+          </div>
+          <div class="admin-stat-card">
+            <span class="admin-stat-label">전체 댓글</span>
+            <div class="admin-stat-row"><strong id="commentCount">0</strong><em>개</em></div>
+          </div>
+          <div class="admin-stat-card">
+            <span class="admin-stat-label">전체 좋아요</span>
+            <div class="admin-stat-row"><strong id="likeCount">0</strong><em>개</em></div>
+          </div>
+        </div>
+
+        <div id="boardAdminEmpty" class="admin-empty hidden">
+          <div class="admin-empty-mark">✎</div>
+          <strong>아직 게시글이 없습니다</strong>
+          <span>익명 게시판에 작성된 글이 이곳에 표시됩니다.</span>
+        </div>
+        <div id="boardAdminList" class="admin-board-list"></div>
+      </section>
     </section>
   </main>
 
@@ -95,6 +126,32 @@
           <button class="primary-btn" type="submit">수정 내용 저장</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <div id="boardAdminModal" class="modal hidden">
+    <div class="modal-card admin-modal-card admin-board-modal-card">
+      <button id="closeBoardAdminModal" class="modal-close" type="button">×</button>
+      <div class="eyebrow">MANAGE BOARD</div>
+      <h2>게시글 관리</h2>
+      <form id="boardEditForm" class="request-form">
+        <input id="boardEditId" type="hidden">
+        <label>제목<input id="boardEditTitle" maxlength="120" required></label>
+        <label>내용<textarea id="boardEditContent" maxlength="5000" rows="7" required></textarea></label>
+        <p id="boardEditMessage" class="form-message"></p>
+        <div class="modal-actions">
+          <button id="adminDeletePostBtn" class="danger-btn" type="button">게시글 전체 삭제</button>
+          <button class="primary-btn" type="submit">수정 내용 저장</button>
+        </div>
+      </form>
+
+      <div class="admin-comments-manage">
+        <div class="admin-comments-head">
+          <strong>댓글 관리</strong>
+          <span id="boardModalCommentCount">0개</span>
+        </div>
+        <div id="boardAdminComments" class="admin-comments-list"></div>
+      </div>
     </div>
   </div>
 
