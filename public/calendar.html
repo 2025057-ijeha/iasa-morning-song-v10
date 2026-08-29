@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#fbf5ed">
+  <title>IASA 주간 기상곡 캘린더</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="calendar-page">
+<header class="nav">
+  <div class="shell nav-inner">
+    <a class="brand" href="/"><span class="logo">♪</span><span>IASA Wake Up</span></a>
+    <nav><a href="/">기상곡 신청</a><a class="active" href="/calendar.html">주간 캘린더</a><a href="/board.html">익명 게시판</a>
+      <a href="/admin.html">관리자</a></nav>
+  </div>
+</header>
+
+<main class="shell calendar-main">
+  <section class="calendar-heading">
+    <div>
+      <span class="eyebrow">WEEKLY REQUEST</span>
+      <h1>주간 기상곡 캘린더</h1>
+      <p>원하는 날짜의 빈 칸을 누르면 바로 해당 날짜·순서로 신청할 수 있습니다.</p>
+    </div>
+    <div class="week-controls">
+      <button id="prevWeek" class="icon-btn">←</button>
+      <button id="todayWeek" class="pill soft">이번 주</button>
+      <button id="nextWeek" class="icon-btn">→</button>
+    </div>
+  </section>
+
+  <div class="calendar-legend">
+    <span><i class="dot free"></i>신청 가능</span>
+    <span><i class="dot filled"></i>신청됨</span>
+    <span><i class="dot past"></i>지난 날짜</span>
+  </div>
+
+  <section class="calendar-shell">
+    <div class="calendar-scroll">
+      <div id="weekGrid" class="week-grid"></div>
+    </div>
+  </section>
+</main>
+
+<div id="modal" class="modal hidden">
+  <div class="modal-bg" data-close></div>
+  <div class="modal-card">
+    <button class="x" data-close>×</button>
+    <span class="eyebrow" id="modalKicker">SONG REQUEST</span>
+    <h2 id="modalTitle">기상곡 신청</h2>
+    <p class="modal-desc" id="modalDescription"></p>
+    <form id="requestForm">
+      <input id="requestId" type="hidden">
+      <div class="form-grid">
+        <label><span>날짜</span><input id="formDate" type="date" required></label>
+        <label><span>신청 순서</span><select id="slot" required>
+          <option value="1">1번</option><option value="2">2번</option><option value="3">3번</option><option value="4">4번</option><option value="5">5번</option><option value="6">6번</option><option value="7">7번</option>
+        </select></label>
+        <label><span>학번</span><input id="studentNumber" required></label>
+        <label><span>이름</span><input id="studentName" required></label>
+        <label class="wide"><span>신청곡 제목</span><input id="songTitle" required></label>
+        <label class="wide"><span>가수 이름</span><input id="artistName" required></label>
+        <label class="wide"><span>YouTube URL</span><div class="url-row"><input id="url" type="url" required><button id="checkBtn" class="pill soft" type="button">AI 검사</button></div></label>
+        <div id="inspectBox" class="inspect neutral wide">
+          <div class="inspect-content">
+            <div class="inspect-head"><div class="status-dot"></div><b>무료 브라우저 AI 유해 콘텐츠 검사</b></div>
+            <div id="inspectSteps" class="inspect-steps">
+              <div class="inspect-step" data-step="1"><span>1</span><p>YouTube 확인</p></div>
+              <div class="inspect-line"></div>
+              <div class="inspect-step" data-step="2"><span>2</span><p>자막 분석</p></div>
+              <div class="inspect-line"></div>
+              <div class="inspect-step" data-step="3"><span>3</span><p>AI 검사</p></div>
+              <div class="inspect-line"></div>
+              <div class="inspect-step" data-step="4"><span>4</span><p>완료</p></div>
+            </div>
+            <p id="inspectText">곡 정보를 입력하고 AI 검사를 눌러주세요.</p>
+          </div>
+        </div>
+        <label class="wide"><span>수정 비밀번호</span><input id="editCode" type="password" minlength="4" required></label>
+      </div>
+      <p id="formMessage" class="error"></p>
+      <div class="form-actions"><button id="deleteBtn" class="pill danger hidden" type="button">신청 삭제</button><button class="pill primary" type="submit">신청 저장</button></div>
+    </form>
+  </div>
+</div>
+<div id="toast" class="toast hidden"></div>
+<footer><div class="shell footer-inner"><b>IASA WEEKLY</b><span>날짜와 순서를 한눈에 확인하세요.</span></div></footer>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/toxicity@1.2.2/dist/toxicity.min.js"></script>
+<script src="/browser-ai.js"></script>
+<script src="/calendar.js"></script>
+</body>
+</html>

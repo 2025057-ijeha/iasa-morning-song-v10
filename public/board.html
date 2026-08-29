@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f6f8f3">
+  <title>IASA 익명 게시판</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="nav">
+  <div class="shell nav-inner">
+    <a class="brand" href="/"><span class="logo">♪</span><span>IASA Wake Up</span></a>
+    <nav>
+      <a href="/">기상곡 신청</a>
+      <a href="/calendar.html">주간 캘린더</a>
+      <a class="active" href="/board.html">익명 게시판</a>
+      <a href="/admin.html">관리자</a>
+    </nav>
+  </div>
+</header>
+
+<section class="board-hero shell">
+  <div>
+    <span class="eyebrow">ANONYMOUS COMMUNITY</span>
+    <h1>IASA 익명 게시판</h1>
+    <p>이름 없이 자유롭게 의견을 나눠보세요. 서로를 존중하는 표현을 사용해주세요.</p>
+  </div>
+  <button id="newPostBtn" class="pill primary">+ 새 글 쓰기</button>
+</section>
+
+<main class="shell board-main">
+  <div class="board-toolbar">
+    <div>
+      <b id="postCount">게시글 0개</b>
+      <span>최신 글부터 표시됩니다.</span>
+    </div>
+    <input id="searchInput" class="search-input" placeholder="게시글 검색">
+  </div>
+  <div id="postList" class="post-list"></div>
+</main>
+
+<div id="postModal" class="modal hidden">
+  <div class="modal-bg" data-close-post></div>
+  <div class="modal-card small">
+    <button class="x" data-close-post>×</button>
+    <span class="eyebrow">NEW POST</span>
+    <h2>익명으로 글쓰기</h2>
+    <form id="postForm">
+      <div class="form-grid one">
+        <label><span>제목</span><input id="postTitle" maxlength="80" placeholder="제목을 입력하세요" required></label>
+        <label><span>내용</span><textarea id="postContent" maxlength="2000" rows="7" placeholder="자유롭게 의견을 적어주세요." required></textarea></label>
+        <label><span>삭제 비밀번호</span><input id="postDeleteCode" type="password" minlength="4" placeholder="4자 이상" required><small>나중에 글을 삭제할 때 필요합니다.</small></label>
+      </div>
+      <p id="postFormMessage" class="error"></p>
+      <div class="form-actions"><button class="pill primary" type="submit">게시하기</button></div>
+    </form>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+<footer><div class="shell footer-inner"><b>IASA COMMUNITY</b><span>익명이지만 서로를 존중해주세요.</span></div></footer>
+<script src="/board.js"></script>
+</body>
+</html>

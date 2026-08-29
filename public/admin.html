@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>IASA 기상곡 관리자</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="admin-page">
+  <header class="topbar">
+    <a class="brand" href="/">IASA</a>
+    <nav>
+      <a href="/">기상곡 신청</a>
+      <a href="/calendar.html">주간 캘린더</a>
+      <a href="/board.html">익명 게시판</a>
+      <a class="active" href="/admin.html">관리자</a>
+    </nav>
+  </header>
+
+  <main class="admin-main">
+    <section id="loginPanel" class="admin-login-card">
+      <div class="admin-login-icon">A</div>
+      <div class="eyebrow">ADMIN ACCESS</div>
+      <h1>관리자 로그인</h1>
+      <p>기상곡 신청 내역을 관리하려면 관리자 비밀번호를 입력해주세요.</p>
+      <form id="loginForm" class="admin-login-form">
+        <div class="admin-password-wrap">
+          <span class="admin-password-label">관리자 비밀번호</span>
+          <input id="adminPassword" type="password" autocomplete="current-password" placeholder="비밀번호를 입력하세요" required>
+        </div>
+        <button class="admin-login-button" type="submit">관리자 페이지 들어가기</button>
+      </form>
+      <p id="loginMessage" class="form-message"></p>
+      <div class="admin-login-note">승인된 관리자만 사용할 수 있는 페이지입니다.</div>
+    </section>
+
+    <section id="adminPanel" class="admin-dashboard hidden">
+      <div class="admin-toolbar">
+        <div>
+          <div class="eyebrow">ADMIN DASHBOARD</div>
+          <h1>신청곡 관리</h1>
+          <p>전체 신청 내역을 날짜·순서별로 확인할 수 있습니다.</p>
+        </div>
+        <div class="admin-toolbar-actions">
+          <input id="searchInput" type="search" placeholder="날짜, 이름, 곡, 가수 검색">
+          <button id="refreshBtn" class="secondary-btn" type="button">새로고침</button>
+          <button id="logoutBtn" class="ghost-btn" type="button">로그아웃</button>
+        </div>
+      </div>
+
+      <div class="admin-summary">
+        <div class="admin-stat-card">
+          <span class="admin-stat-label">전체 신청</span>
+          <div class="admin-stat-row"><strong id="totalCount">0</strong><em>곡</em></div>
+        </div>
+        <div class="admin-stat-card">
+          <span class="admin-stat-label">오늘 신청</span>
+          <div class="admin-stat-row"><strong id="todayCount">0</strong><em>곡</em></div>
+        </div>
+      </div>
+
+      <div id="adminEmpty" class="admin-empty hidden">
+        <div class="admin-empty-mark">♪</div>
+        <strong>아직 신청된 곡이 없습니다</strong>
+        <span>학생들이 신청한 기상곡이 이곳에 표시됩니다.</span>
+      </div>
+      <div id="adminList" class="admin-list"></div>
+    </section>
+  </main>
+
+  <div id="adminModal" class="modal hidden">
+    <div class="modal-card admin-modal-card">
+      <button id="closeAdminModal" class="modal-close" type="button">×</button>
+      <div class="eyebrow">EDIT REQUEST</div>
+      <h2>신청곡 수정</h2>
+      <form id="adminEditForm" class="request-form">
+        <input id="editId" type="hidden">
+        <div class="form-grid">
+          <label>날짜<input id="editDate" type="date" required></label>
+          <label>신청 순서
+            <select id="editSlot" required>
+              <option value="1">1번</option><option value="2">2번</option><option value="3">3번</option>
+              <option value="4">4번</option><option value="5">5번</option><option value="6">6번</option><option value="7">7번</option>
+            </select>
+          </label>
+          <label>학번<input id="editStudentNumber" required></label>
+          <label>이름<input id="editStudentName" required></label>
+          <label class="wide">곡 제목<input id="editSongTitle" required></label>
+          <label class="wide">가수<input id="editArtistName" required></label>
+          <label class="wide">YouTube URL<input id="editUrl" type="url" required></label>
+        </div>
+        <p id="editMessage" class="form-message"></p>
+        <div class="modal-actions">
+          <button id="adminDeleteBtn" class="danger-btn" type="button">이 신청 삭제</button>
+          <button class="primary-btn" type="submit">수정 내용 저장</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f8f6f1">
+  <title>IASA 기상곡 신청</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="nav">
+  <div class="shell nav-inner">
+    <a class="brand" href="/"><span class="logo">♪</span><span>IASA Wake Up</span></a>
+    <nav>
+      <a class="active" href="/">기상곡 신청</a>
+      <a href="/calendar.html">주간 캘린더</a>
+      <a href="/board.html">익명 게시판</a>
+      <a href="/admin.html">관리자</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <img src="/images/morning-banner.png" alt="아침 음악 일러스트">
+  <div class="hero-shade"></div>
+  <div class="shell hero-copy">
+    <span class="hero-kicker">DORMITORY MORNING MUSIC</span>
+    <h1>IASA 기상곡 신청</h1>
+    <p>좋아하는 음악으로 기숙사의 아침을 시작하세요.</p>
+    <a class="pill primary hero-btn" href="/calendar.html">주간 캘린더에서 신청하기 →</a>
+  </div>
+</section>
+
+<main>
+  <section class="shell notice-section">
+    <div class="notice-head">
+      <span class="round-icon">i</span>
+      <div><span class="eyebrow">BEFORE REQUEST</span><h2>신청 전에 확인해주세요</h2></div>
+    </div>
+    <div class="notice-grid">
+      <article><b>하루 7곡</b><span>날짜별 1번부터 7번까지 원하는 순서를 선택합니다.</span></article>
+      <article><b>선착순</b><span>이미 신청된 순서는 다른 학생이 선택할 수 없습니다.</span></article>
+      <article><b>수정 가능</b><span>비밀번호로 곡·날짜·순서를 바꿀 수 있습니다.</span></article>
+      <article><b>무료 브라우저 AI 검사</b><span>API 키·유료 AI 없이 학생의 웹브라우저에서 자막을 검사합니다.</span></article>
+    </div>
+  </section>
+
+  <section class="shell control-row">
+    <div><span class="eyebrow">DAILY VIEW</span><h2>날짜별 신청 현황</h2></div>
+    <label class="date-box"><span>신청 날짜</span><input id="datePicker" type="date"></label>
+  </section>
+
+  <section class="shell schedule-wrap">
+    <div class="section-title">
+      <div><span class="eyebrow">7 SLOTS</span><h2 id="scheduleTitle">신청 현황</h2></div>
+      <div id="aiBadge" class="ai-badge">AI 상태 확인 중</div>
+    </div>
+    <div id="slotGrid" class="slot-grid"></div>
+  </section>
+
+  <section class="shell quick-grid">
+    <a class="quick-card" href="/calendar.html"><span>WEEKLY</span><b>주간 캘린더</b><p>한 화면에서 여러 날짜의 신청 현황을 보고 원하는 칸을 선택하세요.</p></a>
+    <a class="quick-card" href="/board.html"><span>COMMUNITY</span><b>익명 게시판</b><p>기숙사 생활에 대한 의견을 자유롭게 공유하고 댓글과 좋아요를 남겨보세요.</p></a>
+  </section>
+</main>
+
+<div id="modal" class="modal hidden">
+  <div class="modal-bg" data-close></div>
+  <div class="modal-card">
+    <button class="x" data-close>×</button>
+    <span class="eyebrow" id="modalKicker">SONG REQUEST</span>
+    <h2 id="modalTitle">기상곡 신청</h2>
+    <p class="modal-desc" id="modalDescription"></p>
+    <form id="requestForm">
+      <input id="requestId" type="hidden">
+      <div class="form-grid">
+        <label><span>날짜</span><input id="formDate" type="date" required></label>
+        <label><span>신청 순서</span><select id="slot" required>
+          <option value="1">1번</option><option value="2">2번</option><option value="3">3번</option><option value="4">4번</option><option value="5">5번</option><option value="6">6번</option><option value="7">7번</option>
+        </select></label>
+        <label><span>학번</span><input id="studentNumber" placeholder="예: 1107" required></label>
+        <label><span>이름</span><input id="studentName" placeholder="이름" required></label>
+        <label class="wide"><span>신청곡 제목</span><input id="songTitle" placeholder="곡 제목" required></label>
+        <label class="wide"><span>가수 이름</span><input id="artistName" placeholder="가수 / 아티스트" required></label>
+        <label class="wide"><span>YouTube URL</span><div class="url-row"><input id="url" type="url" placeholder="https://www.youtube.com/watch?v=..." required><button id="checkBtn" class="pill soft" type="button">AI 검사</button></div></label>
+        <div id="inspectBox" class="inspect neutral wide">
+          <div class="inspect-content">
+            <div class="inspect-head"><div class="status-dot"></div><b>무료 브라우저 AI 유해 콘텐츠 검사</b></div>
+            <div id="inspectSteps" class="inspect-steps">
+              <div class="inspect-step" data-step="1"><span>1</span><p>YouTube 확인</p></div>
+              <div class="inspect-line"></div>
+              <div class="inspect-step" data-step="2"><span>2</span><p>자막 분석</p></div>
+              <div class="inspect-line"></div>
+              <div class="inspect-step" data-step="3"><span>3</span><p>AI 검사</p></div>
+              <div class="inspect-line"></div>
+              <div class="inspect-step" data-step="4"><span>4</span><p>완료</p></div>
+            </div>
+            <p id="inspectText">곡 제목, 가수, 유튜브 주소를 입력한 뒤 AI 검사를 눌러주세요.</p>
+          </div>
+        </div>
+        <label class="wide"><span>수정 비밀번호</span><input id="editCode" type="password" minlength="4" placeholder="4자 이상" required><small>신청 수정·삭제에 사용합니다.</small></label>
+      </div>
+      <p id="formMessage" class="error"></p>
+      <div class="form-actions"><button id="deleteBtn" class="pill danger hidden" type="button">신청 삭제</button><button class="pill primary" type="submit">신청 저장</button></div>
+    </form>
+  </div>
+</div>
+<div id="toast" class="toast hidden"></div>
+<footer><div class="shell footer-inner"><b>IASA WAKE UP</b><span>모두가 편하게 들을 수 있는 음악을 신청해주세요.</span></div></footer>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/toxicity@1.2.2/dist/toxicity.min.js"></script>
+<script src="/browser-ai.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
