@@ -790,3 +790,6 @@ footer{margin-top:72px;background:#18221b;color:#fff;padding:28px 0}
   .board-table-head{display:none}.board-post-row{grid-template-columns:minmax(0,1fr) auto auto;padding:16px 14px;gap:8px}.board-row-title{grid-column:1/-1;padding-right:0}.board-row-stat{background:#eef6ec;border-radius:999px;padding:5px 8px;display:flex;gap:4px;align-items:center}.board-row-stat b{font-size:11px}.board-row-stat small{display:block;font-size:9px;color:#758578}.board-row-date{text-align:right}.board-row-arrow{display:none}
   .board-detail-comment-form{flex-direction:column}.board-detail-modal{max-height:92vh}
 }
+
+.excel-export-btn{border:0;border-radius:12px;padding:10px 14px;background:#39784a;color:#fff;font-weight:850;cursor:pointer;box-shadow:0 6px 16px rgba(57,120,74,.15)}
+.excel-export-btn:hover{background:#2f6c40}.excel-export-btn:disabled{opacity:.65;cursor:wait}

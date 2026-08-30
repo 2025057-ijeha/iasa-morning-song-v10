@@ -1,11 +1,12 @@
 const express = require("express");
 const path = require("path");
 const crypto = require("crypto");
+const ExcelJS = require("exceljs");
 const storage = require("./storage");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "iasadormitory2026";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "wpgktkfkdgo0226";
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.createHash("sha256").update(`iasa:${ADMIN_PASSWORD}:session`).digest("hex");
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
@@ -55,6 +56,43 @@ app.post("/api/admin/logout",requireAdmin,(req,res)=>{
 app.get("/api/admin/status",(req,res)=>res.json({authenticated:isAdmin(req)}));
 app.get("/api/admin/requests",requireAdmin,asyncRoute(async(req,res)=>{
   const rows=await storage.listAllRequests();res.json(rows.map(publicRequest));
+}));
+app.get("/api/admin/requests/export.xlsx",requireAdmin,asyncRoute(async(req,res)=>{
+  const rows=(await storage.listAllRequests()).map(publicRequest)
+    .sort((a,b)=>String(a.requestDate).localeCompare(String(b.requestDate)) || Number(a.slot)-Number(b.slot));
+  const workbook=new ExcelJS.Workbook();
+  workbook.creator="IASA Morning Song";
+  const ws=workbook.addWorksheet("기상곡 신청 목록",{views:[{state:"frozen",ySplit:2}]});
+  ws.columns=[
+    {width:16},{width:9},{width:13},{width:13},{width:30},{width:28},{width:48}
+  ];
+  ws.mergeCells("A1:G1");
+  ws.getCell("A1").value="시트 수정한 학번/이름 확인 가능합니다. 심의를 준수해서 노래를 신청해 주세요.";
+  ws.getCell("A1").font={bold:true,size:11,color:{argb:"FF26352A"}};
+  ws.getCell("A1").alignment={vertical:"middle",horizontal:"left"};
+  ws.getCell("A1").fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFEAF4E7"}};
+  ws.getRow(1).height=25;
+  const headers=["요일","연번","학번","이름","노래 제목","아티스트","노래 유튜브 링크(선택)"];
+  const hr=ws.getRow(2);hr.values=headers;hr.height=24;
+  hr.eachCell(c=>{c.font={bold:true,color:{argb:"FFFFFFFF"}};c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF4D815A"}};c.alignment={horizontal:"center",vertical:"middle"};});
+  const wd=["일","월","화","수","목","금","토"];let last=null;
+  for(const x of rows){
+    if(last!==null&&x.requestDate!==last)ws.addRow([]);
+    const d=new Date(`${x.requestDate}T00:00:00`);
+    const label=`${wd[d.getDay()]}(${d.getMonth()+1}/${d.getDate()})`;
+    const r=ws.addRow([x.requestDate===last?"":label,Number(x.slot)||"",x.studentNumber||"",x.studentName||"",x.songTitle||"",x.artistName||"",x.url||""]);
+    r.height=22;
+    r.eachCell((c,col)=>{c.alignment={vertical:"middle",horizontal:[2,3,4].includes(col)?"center":"left",wrapText:true};c.border={top:{style:"hair",color:{argb:"FFE1E8DF"}},bottom:{style:"hair",color:{argb:"FFE1E8DF"}},left:{style:"hair",color:{argb:"FFE1E8DF"}},right:{style:"hair",color:{argb:"FFE1E8DF"}}};});
+    if(x.requestDate!==last){r.getCell(1).font={bold:true,color:{argb:"FF356B43"}};r.getCell(1).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFF1F7EF"}};}
+    if(x.url){r.getCell(7).value={text:x.url,hyperlink:x.url};r.getCell(7).font={color:{argb:"FF2F6E9E"},underline:true};}
+    last=x.requestDate;
+  }
+  ws.autoFilter={from:"A2",to:"G2"};
+  const buffer=await workbook.xlsx.writeBuffer();
+  const stamp=new Date().toISOString().slice(0,10);
+  res.setHeader("Content-Type","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader("Content-Disposition",`attachment; filename="iasa-${stamp}.xlsx"; filename*=UTF-8''${encodeURIComponent(`IASA_기상곡_신청목록_${stamp}.xlsx`)}`);
+  res.send(Buffer.from(buffer));
 }));
 app.put("/api/admin/requests/:id",requireAdmin,asyncRoute(async(req,res)=>{
   const current=await storage.getRequest(req.params.id);

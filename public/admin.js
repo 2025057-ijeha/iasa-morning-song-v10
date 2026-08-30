@@ -1,7 +1,7 @@
 const $ = id => document.getElementById(id);
 const loginPanel=$("loginPanel"),adminPanel=$("adminPanel"),loginForm=$("loginForm"),
 adminPassword=$("adminPassword"),loginMessage=$("loginMessage"),searchInput=$("searchInput"),
-refreshBtn=$("refreshBtn"),logoutBtn=$("logoutBtn"),adminTitle=$("adminTitle"),adminSubtitle=$("adminSubtitle"),
+refreshBtn=$("refreshBtn"),exportExcelBtn=$("exportExcelBtn"),logoutBtn=$("logoutBtn"),adminTitle=$("adminTitle"),adminSubtitle=$("adminSubtitle"),
 requestTab=$("requestTab"),boardTab=$("boardTab"),requestView=$("requestView"),boardView=$("boardView"),
 adminList=$("adminList"),adminEmpty=$("adminEmpty"),totalCount=$("totalCount"),todayCount=$("todayCount"),
 boardAdminList=$("boardAdminList"),boardAdminEmpty=$("boardAdminEmpty"),postCount=$("postCount"),
@@ -75,6 +75,7 @@ function setMode(mode){
   adminTitle.textContent=board?"게시판 관리":"신청곡 관리";
   adminSubtitle.textContent=board?"익명 게시글과 댓글을 확인하고 수정·삭제할 수 있습니다.":"전체 신청 내역을 날짜·순서별로 확인하고 수정할 수 있습니다.";
   searchInput.placeholder=board?"게시글 제목, 내용, 댓글 검색":"날짜, 이름, 곡, 가수 검색";
+  exportExcelBtn.classList.toggle("hidden",board);
   renderActive();
 }
 requestTab.onclick=()=>setMode("requests");
@@ -137,6 +138,23 @@ refreshBtn.onclick=async()=>{
   refreshBtn.disabled=true;
   try{if(activeMode==="board")await loadPosts();else await loadRequests();}
   finally{refreshBtn.disabled=false;}
+};
+
+exportExcelBtn.onclick=async()=>{
+  const original=exportExcelBtn.textContent;
+  exportExcelBtn.disabled=true;exportExcelBtn.textContent="엑셀 만드는 중...";
+  try{
+    const r=await fetch("/api/admin/requests/export.xlsx");
+    if(r.status===401){showLogin("로그인이 만료되었습니다.");return;}
+    if(!r.ok)throw new Error("엑셀 파일을 만들지 못했습니다.");
+    const blob=await r.blob(),cd=r.headers.get("Content-Disposition")||"";
+    const m=cd.match(/filename\*=UTF-8''([^;]+)/i);
+    const filename=m?decodeURIComponent(m[1]):`IASA_기상곡_신청목록_${localToday()}.xlsx`;
+    const url=URL.createObjectURL(blob),a=document.createElement("a");
+    a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+  }catch(err){alert(err.message||"엑셀 파일을 만들지 못했습니다.");}
+  finally{exportExcelBtn.disabled=false;exportExcelBtn.textContent=original;}
 };
 
 function openEdit(id){
