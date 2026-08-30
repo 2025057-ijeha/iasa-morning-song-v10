@@ -4,7 +4,7 @@ const modal=$("modal"),form=$("requestForm"),requestId=$("requestId"),formDate=$
 const studentNumber=$("studentNumber"),studentName=$("studentName"),songTitle=$("songTitle"),artistName=$("artistName"),url=$("url"),editCode=$("editCode");
 const modalKicker=$("modalKicker"),modalTitle=$("modalTitle"),modalDescription=$("modalDescription"),checkBtn=$("checkBtn");
 const inspectBox=$("inspectBox"),inspectText=$("inspectText"),inspectSteps=$("inspectSteps"),formMessage=$("formMessage"),deleteBtn=$("deleteBtn"),toast=$("toast");
-let weekStart=getMonday(new Date()),requests=[],lastFingerprint="",lastPass=false;
+let weekStart=getMonday(new Date()),requests=[],lastFingerprint="",lastDecision="";
 
 function ymd(d){const x=new Date(d-d.getTimezoneOffset()*60000);return x.toISOString().slice(0,10)}
 function localToday(){return ymd(new Date())}
@@ -28,7 +28,7 @@ function setProgress(step,status="active"){
   });
 }
 function resetInspect(){
-  lastFingerprint="";lastPass=false;
+  lastFingerprint="";lastDecision="";
   inspectBox.className="inspect neutral wide";
   inspectText.textContent="곡 정보를 입력하고 안전검사를 눌러주세요.";
   if(inspectSteps){
@@ -79,7 +79,7 @@ function renderWeek(){
         cell.innerHTML=`<span class="cell-slot">${s}</span><span class="cell-muted">지난 날짜</span>`;
       }else if(item){
         cell.className="calendar-cell filled-cell";
-        cell.innerHTML=`<span class="cell-slot">${s}</span><strong title="${esc(item.songTitle)}">${esc(item.songTitle)}</strong><small title="${esc(item.artistName)}">${esc(item.artistName)}</small><button data-edit="${item.id}">수정</button>`;
+        cell.innerHTML=`<span class="cell-slot">${s}</span><strong title="${esc(item.songTitle)}">${esc(item.songTitle)}</strong><small title="${esc(item.artistName)}">${esc(item.artistName)}</small>${item.inspectionStatus==="review"?'<em class="calendar-review-badge">확인 필요</em>':item.inspectionStatus==="admin_pass"?'<em class="calendar-pass-badge">확인 완료</em>':""}<button data-edit="${item.id}">수정</button>`;
       }else{
         cell.className="calendar-cell free-cell";
         cell.innerHTML=`<span class="cell-slot">${s}</span><button data-new-date="${dateStr}" data-new-slot="${s}"><b>＋</b><span>신청</span></button>`;
@@ -107,7 +107,7 @@ async function inspect(){
   }
 
   checkBtn.disabled=true;
-  lastPass=false;
+  lastDecision="";
   setInspect("checking","① YouTube 링크를 확인하고 있습니다...");
   setProgress(1,"active");
 
@@ -129,14 +129,22 @@ async function inspect(){
 
     lastFingerprint=fingerprint();
 
-    if(!r.ok||!j.ok){
-      lastPass=false;
-      const failStep={
-        youtube:1,"metadata-filter":1,"youtube-match":1,catalog:2,rating:3
-      }[j.stage]||2;
+    if(j.status==="block"||!j.canSubmit){
+      lastDecision="block";
+      const failStep={youtube:1,"metadata-filter":1,rating:3}[j.stage]||2;
       setProgress(failStep,"fail");
-      setInspect("fail",(j.message||"곡 안전검사를 완료하지 못했습니다.")+(j.detail?` ${j.detail}`:""));
+      setInspect("fail",(j.message||"이 곡은 신청할 수 없습니다.")+(j.detail?` ${j.detail}`:""));
       return false;
+    }
+
+    if(j.status==="review"){
+      lastDecision="review";
+      const reviewStep={
+        youtube:1,"youtube-service":1,catalog:2,service:2,"youtube-match":2,conflict:3,rating:3,"rating-unknown":3
+      }[j.stage]||3;
+      setProgress(reviewStep,"active");
+      setInspect("review",(j.message||"관리자 검사 필요 · 자동검사를 확정하지 못했습니다.")+" "+(j.detail||"신청은 저장할 수 있으며 관리자가 확인합니다."));
+      return true;
     }
 
     setProgress(3,"active");
@@ -144,14 +152,14 @@ async function inspect(){
     setInspect("checking",`③ ${matched}의 Explicit 등급을 확인하고 있습니다...`);
     await new Promise(resolve=>setTimeout(resolve,180));
 
-    lastPass=true;
+    lastDecision="pass";
     setProgress(4,"done");
     setInspect("pass","④ "+(j.message||"검사 완료 · Explicit 표시 없음"));
     return true;
   }catch(err){
-    lastPass=false;
+    lastDecision="";
     setProgress(2,"fail");
-    setInspect("fail","곡 안전검사 서비스와 연결하지 못했습니다. 잠시 후 다시 시도해주세요.");
+    setInspect("fail","사이트 서버와 연결하지 못했습니다. 연결을 확인한 뒤 다시 검사해주세요.");
     return false;
   }finally{
     checkBtn.disabled=false;
@@ -161,12 +169,12 @@ checkBtn.onclick=inspect;
 
 form.onsubmit=async e=>{
   e.preventDefault();formMessage.textContent="";
-  if(fingerprint()!==lastFingerprint||!lastPass){if(!await inspect()){formMessage.textContent="안전 검사를 통과해야 신청할 수 있습니다.";return}}
+  if(fingerprint()!==lastFingerprint||!["pass","review"].includes(lastDecision)){if(!await inspect()){formMessage.textContent="차단 판정을 받은 곡은 신청할 수 없습니다.";return}}
   const body={requestDate:formDate.value,slot:Number(slot.value),studentNumber:studentNumber.value.trim(),studentName:studentName.value.trim(),songTitle:songTitle.value.trim(),artistName:artistName.value.trim(),url:url.value.trim(),editCode:editCode.value};
   const editing=Boolean(requestId.value);
   const r=await fetch(editing?`/api/requests/${requestId.value}`:"/api/requests",{method:editing?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
   const j=await r.json();if(!r.ok){formMessage.textContent=j.message||"저장하지 못했습니다.";return}
-  close();notify(editing?"수정되었습니다.":"신청되었습니다.");await loadWeek();
+  close();notify(j.review?"신청 저장 완료 · 관리자 검사 필요":(editing?"수정되었습니다.":"신청되었습니다."));await loadWeek();
 };
 deleteBtn.onclick=async()=>{
   if(!editCode.value){formMessage.textContent="삭제 비밀번호를 입력해주세요.";return}

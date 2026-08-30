@@ -14,6 +14,13 @@ create table if not exists public.requests (
   created_at timestamptz not null default now(),
   updated_at timestamptz,
   admin_edited boolean not null default false,
+  inspection_status text not null default 'pass',
+  inspection_message text not null default '',
+  inspection_detail text not null default '',
+  inspection_source text not null default '',
+  matched_song_title text not null default '',
+  matched_song_artist text not null default '',
+  inspected_at timestamptz,
   constraint requests_date_slot_unique unique (request_date, slot)
 );
 

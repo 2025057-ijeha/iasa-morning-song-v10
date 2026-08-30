@@ -9,7 +9,7 @@ commentCount=$("commentCount"),likeCount=$("likeCount"),
 modal=$("adminModal"),closeModal=$("closeAdminModal"),editForm=$("adminEditForm"),editId=$("editId"),
 editDate=$("editDate"),editSlot=$("editSlot"),editStudentNumber=$("editStudentNumber"),
 editStudentName=$("editStudentName"),editSongTitle=$("editSongTitle"),editArtistName=$("editArtistName"),
-editUrl=$("editUrl"),editMessage=$("editMessage"),deleteBtn=$("adminDeleteBtn"),
+editUrl=$("editUrl"),editMessage=$("editMessage"),deleteBtn=$("adminDeleteBtn"),adminInspectionBox=$("adminInspectionBox"),adminInspectionBadge=$("adminInspectionBadge"),adminInspectionMessage=$("adminInspectionMessage"),adminInspectionDetail=$("adminInspectionDetail"),adminRecheckBtn=$("adminRecheckBtn"),adminApproveBtn=$("adminApproveBtn"),
 boardModal=$("boardAdminModal"),closeBoardModal=$("closeBoardAdminModal"),boardEditForm=$("boardEditForm"),
 boardEditId=$("boardEditId"),boardEditTitle=$("boardEditTitle"),boardEditContent=$("boardEditContent"),
 boardEditMessage=$("boardEditMessage"),adminDeletePostBtn=$("adminDeletePostBtn"),
@@ -30,6 +30,12 @@ function formatDateTime(v){
   if(!v)return "";
   try{return new Intl.DateTimeFormat("ko-KR",{year:"numeric",month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date(v));}
   catch{return String(v);}
+}
+function inspectionLabel(status){
+  return status==="review"?"관리자 검사 필요":status==="admin_pass"?"관리자 확인 완료":status==="blocked"?"차단 판정":"자동검사 통과";
+}
+function inspectionClass(status){
+  return status==="review"?"review":status==="admin_pass"?"admin-pass":status==="blocked"?"blocked":"pass";
 }
 function showLogin(msg=""){
   loginPanel.classList.remove("hidden");adminPanel.classList.add("hidden");loginMessage.textContent=msg;
@@ -86,7 +92,7 @@ function renderActive(){activeMode==="board"?renderPosts():renderRequests();}
 function renderRequests(){
   const q=searchInput.value.trim().toLowerCase();
   const filtered=requests.filter(x=>{
-    const hay=[x.requestDate,x.slot,x.studentNumber,x.studentName,x.songTitle,x.artistName,x.url].join(" ").toLowerCase();
+    const hay=[x.requestDate,x.slot,x.studentNumber,x.studentName,x.songTitle,x.artistName,x.url,inspectionLabel(x.inspectionStatus),x.inspectionMessage].join(" ").toLowerCase();
     return !q||hay.includes(q);
   });
   totalCount.textContent=requests.length;
@@ -96,7 +102,8 @@ function renderRequests(){
     <article class="admin-request-card">
       <div class="admin-request-top">
         <div class="admin-date-slot"><span>${esc(x.requestDate)}</span><b>${esc(x.slot)}번</b></div>
-        <button class="small-edit-btn" data-edit-request="${esc(x.id)}" type="button">수정</button>
+        <div class="admin-card-actions"><span class="inspection-badge ${inspectionClass(x.inspectionStatus)}">${esc(inspectionLabel(x.inspectionStatus))}</span>
+        <button class="small-edit-btn" data-edit-request="${esc(x.id)}" type="button">수정</button></div>
       </div>
       <div class="admin-song"><h3>${esc(x.songTitle)}</h3><p>${esc(x.artistName)}</p></div>
       <div class="admin-meta"><span>학번 ${esc(x.studentNumber)}</span><span>${esc(x.studentName)}</span></div>
@@ -162,6 +169,10 @@ function openEdit(id){
   editId.value=x.id;editDate.value=x.requestDate;editSlot.value=x.slot;
   editStudentNumber.value=x.studentNumber||"";editStudentName.value=x.studentName||"";
   editSongTitle.value=x.songTitle||"";editArtistName.value=x.artistName||"";editUrl.value=x.url||"";
+  adminInspectionBadge.textContent=inspectionLabel(x.inspectionStatus);adminInspectionBadge.className=`inspection-badge ${inspectionClass(x.inspectionStatus)}`;
+  adminInspectionMessage.textContent=x.inspectionMessage||inspectionLabel(x.inspectionStatus);
+  adminInspectionDetail.textContent=[x.inspectionDetail,x.matchedSongTitle?`자동 매칭: ${x.matchedSongTitle} · ${x.matchedSongArtist}`:""].filter(Boolean).join(" · ");
+  adminApproveBtn.classList.toggle("hidden",x.inspectionStatus==="admin_pass");
   editMessage.textContent="";modal.classList.remove("hidden");
 }
 function hideModal(){modal.classList.add("hidden");}
@@ -174,6 +185,26 @@ editForm.addEventListener("submit",async e=>{
   const j=await r.json().catch(()=>({}));if(!r.ok){editMessage.textContent=j.message||"수정하지 못했습니다.";return;}
   hideModal();await loadRequests();
 });
+
+adminApproveBtn.onclick=async()=>{
+  const id=editId.value;if(!id)return;
+  adminApproveBtn.disabled=true;editMessage.textContent="관리자 확인 처리 중...";
+  try{
+    const r=await fetch(`/api/admin/requests/${encodeURIComponent(id)}/approve`,{method:"POST"});
+    const j=await r.json().catch(()=>({}));if(!r.ok){editMessage.textContent=j.message||"처리하지 못했습니다.";return;}
+    await loadRequests(false);openEdit(id);renderRequests();editMessage.textContent="관리자 확인 완료로 변경했습니다.";
+  }finally{adminApproveBtn.disabled=false;}
+};
+adminRecheckBtn.onclick=async()=>{
+  const id=editId.value;if(!id)return;
+  adminRecheckBtn.disabled=true;editMessage.textContent="Apple + Deezer로 다시 검사 중...";
+  try{
+    const r=await fetch(`/api/admin/requests/${encodeURIComponent(id)}/recheck`,{method:"POST"});
+    const j=await r.json().catch(()=>({}));if(!r.ok){editMessage.textContent=j.message||"재검사하지 못했습니다.";return;}
+    await loadRequests(false);openEdit(id);renderRequests();
+    editMessage.textContent=j.inspection?.status==="block"?"자동 재검사에서 차단 판정이 확인되었습니다. 삭제 여부를 확인해주세요.":"재검사가 완료되었습니다.";
+  }finally{adminRecheckBtn.disabled=false;}
+};
 
 deleteBtn.onclick=async()=>{
   if(!confirm("이 신청곡을 정말 삭제할까요?"))return;

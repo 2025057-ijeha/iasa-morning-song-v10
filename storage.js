@@ -40,7 +40,14 @@ function dbRequestToApp(row) {
     editHash: row.edit_hash,
     createdAt: row.created_at,
     updatedAt: row.updated_at || undefined,
-    adminEdited: Boolean(row.admin_edited)
+    adminEdited: Boolean(row.admin_edited),
+    inspectionStatus: row.inspection_status || "pass",
+    inspectionMessage: row.inspection_message || "",
+    inspectionDetail: row.inspection_detail || "",
+    inspectionSource: row.inspection_source || "",
+    matchedSongTitle: row.matched_song_title || "",
+    matchedSongArtist: row.matched_song_artist || "",
+    inspectedAt: row.inspected_at || undefined
   };
 }
 function appRequestToDb(row) {
@@ -56,7 +63,14 @@ function appRequestToDb(row) {
     edit_hash: row.editHash,
     created_at: row.createdAt,
     updated_at: row.updatedAt || null,
-    admin_edited: Boolean(row.adminEdited)
+    admin_edited: Boolean(row.adminEdited),
+    inspection_status: row.inspectionStatus || "pass",
+    inspection_message: row.inspectionMessage || "",
+    inspection_detail: row.inspectionDetail || "",
+    inspection_source: row.inspectionSource || "",
+    matched_song_title: row.matchedSongTitle || "",
+    matched_song_artist: row.matchedSongArtist || "",
+    inspected_at: row.inspectedAt || null
   };
 }
 

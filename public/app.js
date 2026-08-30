@@ -4,7 +4,7 @@ const modal=$("modal"),form=$("requestForm"),requestId=$("requestId"),formDate=$
 const studentNumber=$("studentNumber"),studentName=$("studentName"),songTitle=$("songTitle"),artistName=$("artistName"),url=$("url"),editCode=$("editCode");
 const modalKicker=$("modalKicker"),modalTitle=$("modalTitle"),modalDescription=$("modalDescription"),checkBtn=$("checkBtn");
 const inspectBox=$("inspectBox"),inspectText=$("inspectText"),inspectSteps=$("inspectSteps"),formMessage=$("formMessage"),deleteBtn=$("deleteBtn"),toast=$("toast");
-let requests=[],lastFingerprint="",lastPass=false;
+let requests=[],lastFingerprint="",lastDecision="";
 
 function localToday(){const d=new Date();return new Date(d-d.getTimezoneOffset()*60000).toISOString().slice(0,10)}
 function fmtDate(v){return new Intl.DateTimeFormat("ko-KR",{month:"long",day:"numeric",weekday:"short"}).format(new Date(v+"T00:00:00"))}
@@ -24,7 +24,7 @@ function setProgress(step,status="active"){
   });
 }
 function resetInspect(){
-  lastFingerprint="";lastPass=false;
+  lastFingerprint="";lastDecision="";
   inspectBox.className="inspect neutral wide";
   inspectText.textContent="곡 제목, 가수, 유튜브 주소를 입력한 뒤 안전검사를 눌러주세요.";
   if(inspectSteps){
@@ -60,6 +60,7 @@ function render(){
     card.className=`slot-card ${item?"":"empty"}`;
     if(item){
       card.innerHTML=`<div><span class="slot-number">${i}번</span><h3 class="song-title">${esc(item.songTitle)}</h3><div class="artist">${esc(item.artistName)}</div><div class="requester">${esc(item.studentNumber)} · ${esc(item.studentName)}</div></div>
+      ${item.inspectionStatus==="review"?'<div class="public-review-badge">관리자 확인 필요</div>':item.inspectionStatus==="admin_pass"?'<div class="public-pass-badge">관리자 확인 완료</div>':""}
       <div class="card-actions"><a href="${esc(item.url)}" target="_blank" rel="noopener">YouTube ↗</a><button data-edit="${item.id}">수정</button></div>`;
     }else{
       card.innerHTML=`<div><span class="slot-number">${i}번</span><h3 class="empty-title">신청 가능</h3><div class="empty-copy">${i}번째 기상곡 자리가 비어 있습니다.</div></div>
@@ -86,7 +87,7 @@ async function inspect(){
   }
 
   checkBtn.disabled=true;
-  lastPass=false;
+  lastDecision="";
   setInspect("checking","① YouTube 링크를 확인하고 있습니다...");
   setProgress(1,"active");
 
@@ -108,14 +109,22 @@ async function inspect(){
 
     lastFingerprint=fingerprint();
 
-    if(!r.ok||!j.ok){
-      lastPass=false;
-      const failStep={
-        youtube:1,"metadata-filter":1,"youtube-match":1,catalog:2,rating:3
-      }[j.stage]||2;
+    if(j.status==="block"||!j.canSubmit){
+      lastDecision="block";
+      const failStep={youtube:1,"metadata-filter":1,rating:3}[j.stage]||2;
       setProgress(failStep,"fail");
-      setInspect("fail",(j.message||"곡 안전검사를 완료하지 못했습니다.")+(j.detail?` ${j.detail}`:""));
+      setInspect("fail",(j.message||"이 곡은 신청할 수 없습니다.")+(j.detail?` ${j.detail}`:""));
       return false;
+    }
+
+    if(j.status==="review"){
+      lastDecision="review";
+      const reviewStep={
+        youtube:1,"youtube-service":1,catalog:2,service:2,"youtube-match":2,conflict:3,rating:3,"rating-unknown":3
+      }[j.stage]||3;
+      setProgress(reviewStep,"active");
+      setInspect("review",(j.message||"관리자 검사 필요 · 자동검사를 확정하지 못했습니다.")+" "+(j.detail||"신청은 저장할 수 있으며 관리자가 확인합니다."));
+      return true;
     }
 
     setProgress(3,"active");
@@ -123,14 +132,14 @@ async function inspect(){
     setInspect("checking",`③ ${matched}의 Explicit 등급을 확인하고 있습니다...`);
     await new Promise(resolve=>setTimeout(resolve,180));
 
-    lastPass=true;
+    lastDecision="pass";
     setProgress(4,"done");
     setInspect("pass","④ "+(j.message||"검사 완료 · Explicit 표시 없음"));
     return true;
   }catch(err){
-    lastPass=false;
+    lastDecision="";
     setProgress(2,"fail");
-    setInspect("fail","곡 안전검사 서비스와 연결하지 못했습니다. 잠시 후 다시 시도해주세요.");
+    setInspect("fail","사이트 서버와 연결하지 못했습니다. 연결을 확인한 뒤 다시 검사해주세요.");
     return false;
   }finally{
     checkBtn.disabled=false;
@@ -140,13 +149,13 @@ checkBtn.onclick=inspect;
 
 form.onsubmit=async e=>{
   e.preventDefault();formMessage.textContent="";
-  if(fingerprint()!==lastFingerprint||!lastPass){if(!await inspect()){formMessage.textContent="안전 검사를 통과해야 신청할 수 있습니다.";return}}
+  if(fingerprint()!==lastFingerprint||!["pass","review"].includes(lastDecision)){if(!await inspect()){formMessage.textContent="차단 판정을 받은 곡은 신청할 수 없습니다.";return}}
   const body={requestDate:formDate.value,slot:Number(slot.value),studentNumber:studentNumber.value.trim(),studentName:studentName.value.trim(),songTitle:songTitle.value.trim(),artistName:artistName.value.trim(),url:url.value.trim(),editCode:editCode.value};
   const editing=Boolean(requestId.value);
   try{
     const r=await fetch(editing?`/api/requests/${requestId.value}`:"/api/requests",{method:editing?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
     const j=await r.json();if(!r.ok){formMessage.textContent=j.message||"저장하지 못했습니다.";return}
-    datePicker.value=formDate.value;close();notify(editing?"신청이 수정되었습니다.":"기상곡 신청이 완료되었습니다.");await loadRequests();
+    datePicker.value=formDate.value;close();notify(j.review?"신청 저장 완료 · 관리자 검사 필요":(editing?"신청이 수정되었습니다.":"기상곡 신청이 완료되었습니다."));await loadRequests();
   }catch{formMessage.textContent="서버와 연결할 수 없습니다."}
 };
 deleteBtn.onclick=async()=>{

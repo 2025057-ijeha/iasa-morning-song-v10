@@ -793,3 +793,25 @@ footer{margin-top:72px;background:#18221b;color:#fff;padding:28px 0}
 
 .excel-export-btn{border:0;border-radius:12px;padding:10px 14px;background:#39784a;color:#fff;font-weight:850;cursor:pointer;box-shadow:0 6px 16px rgba(57,120,74,.15)}
 .excel-export-btn:hover{background:#2f6c40}.excel-export-btn:disabled{opacity:.65;cursor:wait}
+
+/* v10.5 inspection review workflow */
+.inspect.review{background:#fff8e8;color:#8b651b;border-color:#ead7a6}
+.inspect.review .status-dot{background:#d49b2f}
+.public-review-badge,.public-pass-badge{display:inline-flex;width:max-content;margin-top:8px;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:900}
+.public-review-badge{background:#fff4d8;color:#946515}
+.public-pass-badge{background:#e8f5e9;color:#39784a}
+.inspection-badge{display:inline-flex;align-items:center;padding:6px 9px;border-radius:999px;font-size:10px;font-weight:900;white-space:nowrap;background:#eaf5eb;color:#39784a}
+.inspection-badge.pass{background:#eaf5eb;color:#39784a}
+.inspection-badge.review{background:#fff3d3;color:#906215}
+.inspection-badge.admin-pass{background:#e5f1ff;color:#35658b}
+.inspection-badge.blocked{background:#ffe5e1;color:#ba4338}
+.admin-card-actions{display:flex;align-items:center;gap:8px}
+.admin-inspection-box{margin:16px 0;background:#f6faf5;border-radius:16px;padding:15px 16px;display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+.admin-inspection-box strong{display:block;margin-top:9px;font-size:13px}
+.admin-inspection-box p{margin:5px 0 0;font-size:11px;color:#6d796f;line-height:1.55}
+.admin-inspection-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:720px){.admin-inspection-box{flex-direction:column}.admin-inspection-actions{justify-content:flex-start}}
+
+.calendar-review-badge,.calendar-pass-badge{display:inline-flex;width:max-content;font-style:normal;font-size:9px;font-weight:900;border-radius:999px;padding:3px 6px;margin-top:3px}
+.calendar-review-badge{background:#fff3d3;color:#906215}
+.calendar-pass-badge{background:#e5f1ff;color:#35658b}

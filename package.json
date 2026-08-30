@@ -1,8 +1,8 @@
 {
   "name": "iasa-morning-song",
-  "version": "10.4.2",
+  "version": "10.5.0",
   "private": true,
-  "description": "IASA 기상곡 신청 + Supabase + 곡 제목/가수 기반 Explicit 자동검사 + 관리자 Excel/게시판 관리",
+  "description": "IASA 기상곡 신청 + Apple/Deezer 곡 안전검사 + 관리자 검토 상태 + Supabase + Excel/게시판 관리",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

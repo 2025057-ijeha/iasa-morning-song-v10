@@ -121,6 +121,17 @@
           <label class="wide">가수<input id="editArtistName" required></label>
           <label class="wide">YouTube URL<input id="editUrl" type="url" required></label>
         </div>
+        <div id="adminInspectionBox" class="admin-inspection-box">
+          <div>
+            <span id="adminInspectionBadge" class="inspection-badge">검사 상태</span>
+            <strong id="adminInspectionMessage">검사 상태를 불러오는 중...</strong>
+            <p id="adminInspectionDetail"></p>
+          </div>
+          <div class="admin-inspection-actions">
+            <button id="adminRecheckBtn" class="secondary-btn" type="button">다시 자동검사</button>
+            <button id="adminApproveBtn" class="primary-btn" type="button">관리자 확인 완료</button>
+          </div>
+        </div>
         <p id="editMessage" class="form-message"></p>
         <div class="modal-actions">
           <button id="adminDeleteBtn" class="danger-btn" type="button">이 신청 삭제</button>
