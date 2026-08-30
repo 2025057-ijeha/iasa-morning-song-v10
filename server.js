@@ -197,38 +197,71 @@ function textSimilarity(a,b){
   const union=new Set([...aa,...bb]).size||1;
   return inter/union;
 }
-function candidateScore(inputTitle,inputArtist,item){
+function candidateMetrics(inputTitle,inputArtist,youtubeTitle,item){
   const titleScore=textSimilarity(inputTitle,item.trackName||"");
   const artistScore=textSimilarity(inputArtist,item.artistName||"");
-  return titleScore*0.67+artistScore*0.33;
+  const youtubeTitleScore=textSimilarity(item.trackName||"",youtubeTitle||"");
+  const inputArtistYoutubeScore=textSimilarity(inputArtist,youtubeTitle||"");
+  const catalogArtistYoutubeScore=textSimilarity(item.artistName||"",youtubeTitle||"");
+
+  // 제목은 반드시 강하게 일치해야 합니다.
+  const titleVerified=titleScore>=0.78 || (titleScore>=0.68 && youtubeTitleScore>=0.78);
+
+  // 한국 가수명이 Apple에서 영문 표기(YUMDDA 등)되는 경우가 있어,
+  // 입력 가수명과 카탈로그 가수가 직접 일치하지 않더라도
+  // 둘 다 같은 YouTube 영상 제목에서 확인되면 동일 가수로 인정합니다.
+  const artistVerified=
+    artistScore>=0.72 ||
+    (inputArtistYoutubeScore>=0.78 && catalogArtistYoutubeScore>=0.68);
+
+  const score=
+    titleScore*0.45 +
+    artistScore*0.25 +
+    youtubeTitleScore*0.15 +
+    inputArtistYoutubeScore*0.075 +
+    catalogArtistYoutubeScore*0.075;
+
+  return {
+    titleScore,artistScore,youtubeTitleScore,inputArtistYoutubeScore,catalogArtistYoutubeScore,
+    titleVerified,artistVerified,verified:titleVerified&&artistVerified,score
+  };
 }
-async function appleSearch(songTitle,artistName,country){
-  const term=encodeURIComponent(`${songTitle} ${artistName}`);
-  const endpoint=`https://itunes.apple.com/search?term=${term}&country=${country}&media=music&entity=song&limit=40`;
-  const r=await fetch(endpoint,{headers:{"User-Agent":"IASA-Morning-Song/10.4","Accept":"application/json"}});
+async function appleSearchTerm(term,country){
+  const endpoint=`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&country=${country}&media=music&entity=song&limit=50`;
+  const r=await fetch(endpoint,{headers:{"User-Agent":"IASA-Morning-Song/10.4.2","Accept":"application/json"}});
   if(!r.ok)throw new Error(`APPLE_${country}_${r.status}`);
   const j=await r.json();
   return Array.isArray(j.results)?j.results:[];
 }
-async function findCatalogSong(songTitle,artistName){
+async function findCatalogSong(songTitle,artistName,youtubeTitle=""){
   let results=[];
   const errors=[];
+  const terms=[`${songTitle} ${artistName}`,songTitle];
   for(const country of ["KR","US"]){
-    try{
-      const found=await appleSearch(songTitle,artistName,country);
-      results.push(...found.map(x=>({...x,_country:country})));
-    }catch(err){errors.push(String(err.message||err));}
+    for(const term of terms){
+      try{
+        const found=await appleSearchTerm(term,country);
+        results.push(...found.map(x=>({...x,_country:country})));
+      }catch(err){errors.push(String(err.message||err));}
+    }
   }
+
   const dedup=new Map();
   for(const item of results){
     const key=String(item.trackId||`${item.trackName}|${item.artistName}`);
     if(!dedup.has(key))dedup.set(key,item);
   }
+
   const ranked=[...dedup.values()]
-    .map(item=>({...item,_score:candidateScore(songTitle,artistName,item)}))
+    .map(item=>{
+      const m=candidateMetrics(songTitle,artistName,youtubeTitle,item);
+      return {...item,_metrics:m,_score:m.score};
+    })
     .sort((a,b)=>b._score-a._score);
-  const best=ranked[0]||null;
-  return {best:best&&best._score>=0.60?best:null,ranked:ranked.slice(0,5),errors};
+
+  // 핵심: "가장 비슷한 곡"을 쓰지 않고, 제목+가수 검증을 모두 통과한 곡만 사용합니다.
+  const verified=ranked.filter(item=>item._metrics.verified);
+  return {best:verified[0]||null,ranked:ranked.slice(0,8),errors};
 }
 async function youtubeMetadata(videoId){
   const watch=`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
@@ -258,12 +291,12 @@ async function prepareSongInspection(body){
   // YouTube 제목은 업로더마다 표기가 크게 달라질 수 있으므로
   // 제목 유사도만으로 신청을 차단하지 않습니다. 영상 존재 여부와 메타데이터 금지어만 확인합니다.
 
-  const catalog=await findCatalogSong(songTitle,artistName);
+  const catalog=await findCatalogSong(songTitle,artistName,meta.title);
   if(!catalog.best){
     return {
       ok:false,status:"review",stage:"catalog",
       message:"곡 제목과 가수로 정확한 음원을 찾지 못해 자동으로 안전 여부를 확인할 수 없습니다.",
-      detail:"한국 곡도 검색되며, 정식 곡명과 가수명을 정확히 입력해주세요."
+      detail:"다른 곡을 잘못 검사하지 않도록 제목과 가수가 모두 충분히 일치할 때만 자동 판정합니다. 정식 곡명·가수명을 확인해주세요."
     };
   }
 
@@ -275,6 +308,8 @@ async function prepareSongInspection(body){
     album:clean(best.collectionName),
     country:best._country,
     score:Number(best._score.toFixed(2)),
+    titleScore:Number(best._metrics.titleScore.toFixed(2)),
+    artistScore:Number(best._metrics.artistScore.toFixed(2)),
     explicitness
   };
 
