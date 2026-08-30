@@ -7,7 +7,7 @@
   <title>IASA 익명 게시판</title>
   <link rel="stylesheet" href="/style.css">
 </head>
-<body>
+<body class="board-page">
 <header class="nav">
   <div class="shell nav-inner">
     <a class="brand" href="/"><span class="logo">♪</span><span>IASA Wake Up</span></a>
@@ -20,29 +20,45 @@
   </div>
 </header>
 
-<section class="board-hero shell">
+<section class="board-hero shell board-hero-v2">
   <div>
     <span class="eyebrow">ANONYMOUS COMMUNITY</span>
     <h1>IASA 익명 게시판</h1>
-    <p>이름 없이 자유롭게 의견을 나눠보세요. 서로를 존중하는 표현을 사용해주세요.</p>
+    <p>게시글 목록에서 원하는 글을 선택해 내용을 읽고 댓글을 남길 수 있습니다.</p>
   </div>
   <button id="newPostBtn" class="pill primary">+ 새 글 쓰기</button>
 </section>
 
-<main class="shell board-main">
-  <div class="board-toolbar">
-    <div>
-      <b id="postCount">게시글 0개</b>
-      <span>최신 글부터 표시됩니다.</span>
+<main class="shell board-main board-main-v2">
+  <section class="board-control-card">
+    <div class="board-sort-group" role="group" aria-label="게시글 정렬">
+      <button id="latestSortBtn" class="board-sort-btn active" type="button">최신순</button>
+      <button id="popularSortBtn" class="board-sort-btn" type="button">인기순</button>
     </div>
-    <input id="searchInput" class="search-input" placeholder="게시글 검색">
-  </div>
-  <div id="postList" class="post-list"></div>
+    <div class="board-search-wrap">
+      <span class="board-search-icon">⌕</span>
+      <input id="searchInput" class="search-input" placeholder="제목이나 내용을 검색하세요">
+    </div>
+  </section>
+
+  <section class="board-list-panel">
+    <div class="board-list-head">
+      <div>
+        <b id="postCount">게시글 0개</b>
+        <span id="sortDescription">최신 글부터 표시됩니다.</span>
+      </div>
+      <span class="board-list-guide">글을 눌러 자세히 보기</span>
+    </div>
+    <div class="board-table-head" aria-hidden="true">
+      <span>제목</span><span>댓글</span><span>좋아요</span><span>작성일</span>
+    </div>
+    <div id="postList" class="post-list board-post-list"></div>
+  </section>
 </main>
 
 <div id="postModal" class="modal hidden">
   <div class="modal-bg" data-close-post></div>
-  <div class="modal-card small">
+  <div class="modal-card small board-write-modal">
     <button class="x" data-close-post>×</button>
     <span class="eyebrow">NEW POST</span>
     <h2>익명으로 글쓰기</h2>
@@ -56,6 +72,35 @@
       <div class="form-actions"><button class="pill primary" type="submit">게시하기</button></div>
     </form>
   </div>
+</div>
+
+<div id="detailModal" class="modal hidden">
+  <div class="modal-bg" data-close-detail></div>
+  <article class="modal-card board-detail-modal">
+    <button class="x" data-close-detail>×</button>
+    <div class="board-detail-header">
+      <span class="eyebrow">ANONYMOUS POST</span>
+      <h2 id="detailTitle"></h2>
+      <div class="board-detail-meta">
+        <span id="detailDate"></span>
+        <span id="detailCommentCount"></span>
+        <span id="detailLikeCount"></span>
+      </div>
+    </div>
+    <div id="detailContent" class="board-detail-content"></div>
+    <div class="board-detail-actions">
+      <button id="detailLikeBtn" class="board-detail-like" type="button">♥ 좋아요</button>
+      <button id="detailDeleteBtn" class="board-detail-delete" type="button">내 글 삭제</button>
+    </div>
+    <section class="board-detail-comments">
+      <div class="board-comments-title"><strong>댓글</strong><span id="detailCommentsLabel">0개</span></div>
+      <div id="detailCommentList" class="board-detail-comment-list"></div>
+      <form id="detailCommentForm" class="board-detail-comment-form">
+        <input id="detailCommentInput" maxlength="500" placeholder="익명 댓글을 입력하세요" required>
+        <button class="pill primary" type="submit">댓글 달기</button>
+      </form>
+    </section>
+  </article>
 </div>
 
 <div id="toast" class="toast hidden"></div>
