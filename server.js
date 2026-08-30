@@ -159,42 +159,156 @@ function getYoutubeId(value){
   return null;
 }
 
-/* 1차 오프라인 규칙 필터 */
+/* ---------- 제목/가수 기반 곡 안전 검사 ----------
+   - YouTube 자막/가사는 읽지 않습니다.
+   - Apple Music/iTunes 공개 검색을 KR 카탈로그 우선으로 조회합니다.
+   - 곡의 Explicit/Clean 등급 + 제목/가수/YouTube 영상 제목의 금지 표현을 함께 확인합니다.
+*/
 const LOCAL_BLOCK=[
   "씨발","시발","ㅅㅂ","ㅆㅂ","개새끼","개새","병신","븅신","좆","좃","존나","졸라","지랄",
-  "닥쳐","꺼져","창녀","걸레","보지","자지","섹스","성관계","야동","포르노","음란","19금","후방주의",
-  "노출","강간","마약","대마","코카인","필로폰",
+  "창녀","걸레","보지","자지","섹스","성관계","야동","포르노","음란","19금","후방주의",
+  "강간","마약","대마","코카인","필로폰",
   "fuck","fucking","f*ck","f**k","motherfucker","shit","bullshit","bitch","bitches","asshole",
   "dick","pussy","cock","cunt","slut","whore","porn","porno","sex","sexual","nude","nudity","nsfw",
-  "rape","cocaine","heroin","meth"
+  "rape","cocaine","heroin","meth","explicit","uncensored"
 ];
-function normalizeForFilter(text){return String(text||"").toLowerCase().normalize("NFKC").replace(/[\s._\-*~!@#$%^&()+=[\]{}:;"'<>?,/\\|]/g,"");}
-function localFilter(text){const compact=normalizeForFilter(text);return [...new Set(LOCAL_BLOCK.filter(term=>compact.includes(normalizeForFilter(term))))];}
-
+function normalizeForFilter(text){
+  return String(text||"").toLowerCase().normalize("NFKC")
+    .replace(/[\s._\-*~!@#$%^&()+=[\]{}:;"'<>?,/\\|]/g,"");
+}
+function localFilter(text){
+  const compact=normalizeForFilter(text);
+  return [...new Set(LOCAL_BLOCK.filter(term=>compact.includes(normalizeForFilter(term))))];
+}
+function normalizeMusicText(text){
+  return clean(text).toLowerCase().normalize("NFKC")
+    .replace(/\([^)]*\)|\[[^\]]*\]/g," ")
+    .replace(/\b(feat|ft|featuring|prod|remaster(?:ed)?|version|ver|official|audio|lyrics?|mv)\b\.?/gi," ")
+    .replace(/[^0-9a-z가-힣ㄱ-ㅎㅏ-ㅣ]+/gi," ")
+    .replace(/\s+/g," ").trim();
+}
+function textSimilarity(a,b){
+  const A=normalizeMusicText(a),B=normalizeMusicText(b);
+  if(!A||!B)return 0;
+  if(A===B)return 1;
+  if(A.includes(B)||B.includes(A))return Math.min(A.length,B.length)>=3?0.92:0.8;
+  const aa=new Set(A.split(" ").filter(Boolean)),bb=new Set(B.split(" ").filter(Boolean));
+  let inter=0;for(const x of aa)if(bb.has(x))inter++;
+  const union=new Set([...aa,...bb]).size||1;
+  return inter/union;
+}
+function candidateScore(inputTitle,inputArtist,item){
+  const titleScore=textSimilarity(inputTitle,item.trackName||"");
+  const artistScore=textSimilarity(inputArtist,item.artistName||"");
+  return titleScore*0.67+artistScore*0.33;
+}
+async function appleSearch(songTitle,artistName,country){
+  const term=encodeURIComponent(`${songTitle} ${artistName}`);
+  const endpoint=`https://itunes.apple.com/search?term=${term}&country=${country}&media=music&entity=song&limit=40`;
+  const r=await fetch(endpoint,{headers:{"User-Agent":"IASA-Morning-Song/10.4","Accept":"application/json"}});
+  if(!r.ok)throw new Error(`APPLE_${country}_${r.status}`);
+  const j=await r.json();
+  return Array.isArray(j.results)?j.results:[];
+}
+async function findCatalogSong(songTitle,artistName){
+  let results=[];
+  const errors=[];
+  for(const country of ["KR","US"]){
+    try{
+      const found=await appleSearch(songTitle,artistName,country);
+      results.push(...found.map(x=>({...x,_country:country})));
+    }catch(err){errors.push(String(err.message||err));}
+  }
+  const dedup=new Map();
+  for(const item of results){
+    const key=String(item.trackId||`${item.trackName}|${item.artistName}`);
+    if(!dedup.has(key))dedup.set(key,item);
+  }
+  const ranked=[...dedup.values()]
+    .map(item=>({...item,_score:candidateScore(songTitle,artistName,item)}))
+    .sort((a,b)=>b._score-a._score);
+  const best=ranked[0]||null;
+  return {best:best&&best._score>=0.60?best:null,ranked:ranked.slice(0,5),errors};
+}
 async function youtubeMetadata(videoId){
   const watch=`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
   const oembed=`https://www.youtube.com/oembed?url=${encodeURIComponent(watch)}&format=json`;
-  const r=await fetch(oembed,{headers:{"User-Agent":"Mozilla/5.0"}});if(!r.ok)throw new Error("YOUTUBE_NOT_FOUND");
-  const j=await r.json();return {title:clean(j.title),channel:clean(j.author_name)};
-}
-async function youtubeTranscript(videoId){
-  try{
-    const pkg=await import("youtube-transcript");const fetchTranscript=pkg.fetchTranscript||pkg.default?.fetchTranscript;
-    if(!fetchTranscript)return {text:"",available:false};
-    const items=await fetchTranscript(videoId);const text=(items||[]).map(x=>x.text||"").join(" ").replace(/\s+/g," ").trim();
-    return {text:text.slice(0,26000),available:Boolean(text)};
-  }catch{return {text:"",available:false};}
+  const r=await fetch(oembed,{headers:{"User-Agent":"Mozilla/5.0"}});
+  if(!r.ok)throw new Error("YOUTUBE_NOT_FOUND");
+  const j=await r.json();
+  return {title:clean(j.title),channel:clean(j.author_name)};
 }
 async function prepareSongInspection(body){
   const url=clean(body.url),songTitle=clean(body.songTitle),artistName=clean(body.artistName),videoId=getYoutubeId(url);
-  if(!videoId)return {ok:false,status:"block",stage:"url",message:"YouTube 영상 링크만 신청할 수 있습니다."};
-  let meta;try{meta=await youtubeMetadata(videoId);}catch{return {ok:false,status:"block",stage:"youtube",message:"YouTube 영상을 확인할 수 없습니다. 공개 영상 링크인지 확인해주세요."};}
-  const transcriptInfo=await youtubeTranscript(videoId);
-  const combined=[songTitle,artistName,meta.title,meta.channel,transcriptInfo.text].join("\n"),localHits=localFilter(combined);
-  if(localHits.length)return {ok:false,status:"block",stage:"local-filter",message:"욕설·선정적 표현 등 학교 방송에 부적절한 내용이 감지되어 신청할 수 없습니다.",detail:"1차 안전 필터에서 부적절 표현이 감지되었습니다.",transcriptAvailable:transcriptInfo.available};
-  if(!transcriptInfo.available)return {ok:false,status:"review",stage:"transcript",message:"이 영상에서는 자막/가사를 가져오지 못했습니다.",detail:"가사 검사를 위해 자막(CC)이 제공되는 YouTube 영상 링크로 다시 시도해주세요.",transcriptAvailable:false};
-  const analysisText=[`신청곡 제목: ${songTitle}`,`가수: ${artistName}`,`YouTube 제목: ${meta.title}`,`채널: ${meta.channel}`,`자막/가사: ${transcriptInfo.text}`].join("\n").slice(0,26000);
-  return {ok:true,status:"ready-for-browser-ai",stage:"browser-ai-ready",message:"YouTube 정보와 자막을 가져왔습니다. 브라우저 무료 AI 검사를 진행합니다.",transcriptAvailable:true,analysisText,meta};
+  if(!videoId)return {ok:false,status:"block",stage:"youtube",message:"YouTube 영상 링크만 신청할 수 있습니다."};
+
+  let meta;
+  try{meta=await youtubeMetadata(videoId);}
+  catch{return {ok:false,status:"block",stage:"youtube",message:"YouTube 영상을 확인할 수 없습니다. 공개 영상 링크인지 확인해주세요."};}
+
+  const metadataHits=localFilter([songTitle,artistName,meta.title,meta.channel].join("\n"));
+  if(metadataHits.length){
+    return {
+      ok:false,status:"block",stage:"metadata-filter",
+      message:"곡 제목·가수·영상 정보에서 학교 방송에 부적절할 수 있는 표현이 확인되어 신청할 수 없습니다.",
+      detail:"가사나 자막은 읽지 않았으며, 입력 정보와 영상 제목만 확인했습니다."
+    };
+  }
+
+  // 안전한 곡 이름을 적고 전혀 다른 YouTube 영상을 연결하는 것을 방지
+  const youtubeTitleScore=textSimilarity(songTitle,meta.title);
+  if(youtubeTitleScore<0.42){
+    return {
+      ok:false,status:"review",stage:"youtube-match",
+      message:"입력한 곡 제목과 YouTube 영상 제목이 충분히 일치하지 않습니다.",
+      detail:"해당 곡의 공식 오디오·뮤직비디오·가사 영상 링크로 다시 입력해주세요."
+    };
+  }
+
+  const catalog=await findCatalogSong(songTitle,artistName);
+  if(!catalog.best){
+    return {
+      ok:false,status:"review",stage:"catalog",
+      message:"곡 제목과 가수로 정확한 음원을 찾지 못해 자동으로 안전 여부를 확인할 수 없습니다.",
+      detail:"한국 곡도 검색되며, 정식 곡명과 가수명을 정확히 입력해주세요."
+    };
+  }
+
+  const best=catalog.best;
+  const explicitness=String(best.trackExplicitness||best.collectionExplicitness||"notExplicit");
+  const matchedSong={
+    title:clean(best.trackName),
+    artist:clean(best.artistName),
+    album:clean(best.collectionName),
+    country:best._country,
+    score:Number(best._score.toFixed(2)),
+    explicitness
+  };
+
+  if(explicitness==="explicit"){
+    return {
+      ok:false,status:"block",stage:"rating",
+      message:`'${matchedSong.title}' - ${matchedSong.artist} 곡이 Explicit(청소년 부적절 표현 포함)로 표시되어 신청할 수 없습니다.`,
+      detail:"욕설·성적 표현 등으로 Explicit 등급이 붙은 음원은 자동 차단됩니다.",
+      matchedSong
+    };
+  }
+  if(explicitness==="cleaned"){
+    return {
+      ok:false,status:"review",stage:"rating",
+      message:`'${matchedSong.title}' - ${matchedSong.artist} 곡이 Clean 버전으로 표시되어 원곡에 Explicit 버전이 있을 가능성이 있습니다.`,
+      detail:"잘못된 버전 재생을 막기 위해 자동 승인하지 않습니다. 다른 곡을 선택해주세요.",
+      matchedSong
+    };
+  }
+
+  return {
+    ok:true,status:"pass",stage:"complete",
+    message:`검사 완료 · ${matchedSong.title} - ${matchedSong.artist} · Explicit 표시 없음`,
+    detail:"YouTube 자막/가사는 읽지 않고 곡 제목·가수·공개 음원 등급만 확인했습니다.",
+    matchedSong,
+    meta
+  };
 }
 function validateRequest(body){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(clean(body.requestDate)))return "올바른 날짜를 선택해주세요.";
@@ -221,7 +335,6 @@ app.get("/api/requests-range",asyncRoute(async(req,res)=>{
 app.post("/api/requests",asyncRoute(async(req,res)=>{
   const error=validateRequest(req.body);if(error)return res.status(400).json({message:error});
   const inspection=await prepareSongInspection(req.body);if(!inspection.ok)return res.status(422).json({message:inspection.message,inspection});
-  if(req.body.clientAiPassed!==true)return res.status(422).json({message:"브라우저 무료 AI 검사를 먼저 통과해주세요."});
   const item={id:crypto.randomUUID(),requestDate:clean(req.body.requestDate),slot:Number(req.body.slot),studentNumber:clean(req.body.studentNumber),studentName:clean(req.body.studentName),songTitle:clean(req.body.songTitle),artistName:clean(req.body.artistName),url:clean(req.body.url),editHash:hash(clean(req.body.editCode)),createdAt:new Date().toISOString(),adminEdited:false};
   try{const saved=await storage.createRequest(item);res.status(201).json({message:"기상곡 신청이 완료되었습니다.",item:publicRequest(saved)});}catch(err){if(duplicateSlotError(err))return res.status(409).json({message:"이미 신청된 순서입니다."});throw err;}
 }));
@@ -230,7 +343,6 @@ app.put("/api/requests/:id",asyncRoute(async(req,res)=>{
   const current=await storage.getRequest(req.params.id);if(!current)return res.status(404).json({message:"신청 내역을 찾을 수 없습니다."});
   if(!safeEqual(current.editHash,hash(clean(req.body.editCode))))return res.status(403).json({message:"수정 비밀번호가 일치하지 않습니다."});
   const inspection=await prepareSongInspection(req.body);if(!inspection.ok)return res.status(422).json({message:inspection.message,inspection});
-  if(req.body.clientAiPassed!==true)return res.status(422).json({message:"브라우저 무료 AI 검사를 먼저 통과해주세요."});
   const changes={requestDate:clean(req.body.requestDate),slot:Number(req.body.slot),studentNumber:clean(req.body.studentNumber),studentName:clean(req.body.studentName),songTitle:clean(req.body.songTitle),artistName:clean(req.body.artistName),url:clean(req.body.url),updatedAt:new Date().toISOString()};
   try{await storage.updateRequest(req.params.id,changes);res.json({message:"수정되었습니다."});}catch(err){if(duplicateSlotError(err))return res.status(409).json({message:"해당 순서는 이미 신청되어 있습니다."});throw err;}
 }));
@@ -266,9 +378,7 @@ app.delete("/api/posts/:id",asyncRoute(async(req,res)=>{
   await storage.deletePost(req.params.id);res.json({message:"게시글이 삭제되었습니다."});
 }));
 
-app.get("/api/system-status",(req,res)=>{
-  res.json({aiEnabled:true,model:"TensorFlow.js Toxicity",message:"무료 브라우저 AI · API 키 불필요",storage:storage.mode,persistent:storage.mode==="supabase"});
-});
+app.get("/api/system-status",(req,res)=>{res.json({aiEnabled:true,model:"Apple/iTunes Explicit metadata",message:"곡 제목·가수 기반 자동 안전검사",storage:storage.mode,persistent:storage.mode==="supabase"});});
 app.get("/api/health",asyncRoute(async(req,res)=>{
   res.json({ok:true,storage:storage.mode,persistent:storage.mode==="supabase",time:new Date().toISOString()});
 }));

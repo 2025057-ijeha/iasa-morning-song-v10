@@ -30,7 +30,7 @@ function setProgress(step,status="active"){
 function resetInspect(){
   lastFingerprint="";lastPass=false;
   inspectBox.className="inspect neutral wide";
-  inspectText.textContent="곡 정보를 입력하고 AI 검사를 눌러주세요.";
+  inspectText.textContent="곡 정보를 입력하고 안전검사를 눌러주세요.";
   if(inspectSteps){
     inspectSteps.querySelectorAll(".inspect-step").forEach(el=>el.classList.remove("active","done","fail"));
     inspectSteps.querySelectorAll(".inspect-line").forEach(el=>el.classList.remove("done"));
@@ -112,6 +112,10 @@ async function inspect(){
   setProgress(1,"active");
 
   try{
+    await new Promise(resolve=>setTimeout(resolve,120));
+    setProgress(2,"active");
+    setInspect("checking","② 곡 제목과 가수로 한국·해외 음원 카탈로그를 검색하고 있습니다...");
+
     const r=await fetch("/api/check-song",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
@@ -123,55 +127,31 @@ async function inspect(){
     });
     const j=await r.json();
 
-    if(!r.ok || !j.ok){
-      lastFingerprint=fingerprint();
-      const failStep=(j.stage==="url"||j.stage==="youtube")?1:2;
-      setProgress(failStep,"fail");
-      setInspect("fail",(j.message||"검사 자료를 가져오지 못했습니다.")+(j.detail?` ${j.detail}`:""));
-      return false;
-    }
-
-    setInspect("checking","② YouTube 자막/가사를 불러왔습니다. 안전 표현을 확인하고 있습니다...");
-    setProgress(2,"active");
-    await new Promise(resolve=>setTimeout(resolve,250));
-    setProgress(3,"active");
-    setInspect("checking","③ 무료 브라우저 AI 모델을 불러와 자막을 분석하고 있습니다. 첫 검사에는 조금 더 걸릴 수 있습니다...");
-
-    if(!window.IASABrowserAI){
-      throw new Error("AI_LIBRARY_NOT_LOADED");
-    }
-
-    const ai=await window.IASABrowserAI.analyze(j.analysisText,(stage,progress)=>{
-      if(stage==="model"){
-        setInspect("checking","③ 무료 AI 모델을 준비하고 있습니다. 최초 1회는 모델 다운로드 때문에 시간이 더 걸릴 수 있습니다...");
-      }else if(stage==="classify"){
-        const pct=Math.max(1,Math.round((progress||0)*100));
-        setInspect("checking",`③ 무료 AI가 자막을 분석하고 있습니다... ${pct}%`);
-      }
-    });
-
     lastFingerprint=fingerprint();
-    lastPass=Boolean(ai.ok);
 
-    if(ai.ok){
-      setProgress(4,"done");
-      setInspect("pass","④ 검사 완료 · "+ai.reason);
-      return true;
-    }else{
-      setProgress(3,"fail");
-      setInspect("fail","AI 검사에서 부적절 가능성이 감지되어 신청할 수 없습니다. "+ai.reason);
+    if(!r.ok||!j.ok){
+      lastPass=false;
+      const failStep={
+        youtube:1,"metadata-filter":1,"youtube-match":1,catalog:2,rating:3
+      }[j.stage]||2;
+      setProgress(failStep,"fail");
+      setInspect("fail",(j.message||"곡 안전검사를 완료하지 못했습니다.")+(j.detail?` ${j.detail}`:""));
       return false;
     }
+
+    setProgress(3,"active");
+    const matched=j.matchedSong?`${j.matchedSong.title} · ${j.matchedSong.artist}`:"일치 음원";
+    setInspect("checking",`③ ${matched}의 Explicit 등급을 확인하고 있습니다...`);
+    await new Promise(resolve=>setTimeout(resolve,180));
+
+    lastPass=true;
+    setProgress(4,"done");
+    setInspect("pass","④ "+(j.message||"검사 완료 · Explicit 표시 없음"));
+    return true;
   }catch(err){
     lastPass=false;
-    setProgress(3,"fail");
-    const msg=String(err?.message||"");
-    setInspect(
-      "fail",
-      msg.includes("AI_LIBRARY_NOT_LOADED")
-        ?"무료 AI 파일을 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 새로고침해주세요."
-        :"무료 AI 검사 중 오류가 발생했습니다. 인터넷 연결을 확인하고 다시 시도해주세요."
-    );
+    setProgress(2,"fail");
+    setInspect("fail","곡 안전검사 서비스와 연결하지 못했습니다. 잠시 후 다시 시도해주세요.");
     return false;
   }finally{
     checkBtn.disabled=false;
@@ -182,7 +162,7 @@ checkBtn.onclick=inspect;
 form.onsubmit=async e=>{
   e.preventDefault();formMessage.textContent="";
   if(fingerprint()!==lastFingerprint||!lastPass){if(!await inspect()){formMessage.textContent="안전 검사를 통과해야 신청할 수 있습니다.";return}}
-  const body={requestDate:formDate.value,slot:Number(slot.value),studentNumber:studentNumber.value.trim(),studentName:studentName.value.trim(),songTitle:songTitle.value.trim(),artistName:artistName.value.trim(),url:url.value.trim(),editCode:editCode.value,clientAiPassed:true};
+  const body={requestDate:formDate.value,slot:Number(slot.value),studentNumber:studentNumber.value.trim(),studentName:studentName.value.trim(),songTitle:songTitle.value.trim(),artistName:artistName.value.trim(),url:url.value.trim(),editCode:editCode.value};
   const editing=Boolean(requestId.value);
   const r=await fetch(editing?`/api/requests/${requestId.value}`:"/api/requests",{method:editing?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
   const j=await r.json();if(!r.ok){formMessage.textContent=j.message||"저장하지 못했습니다.";return}

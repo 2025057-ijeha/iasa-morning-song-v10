@@ -97,3 +97,19 @@ https://내사이트.onrender.com/api/health
 - 참고 Google Sheet 형식: 요일 / 연번 / 학번 / 이름 / 노래 제목 / 아티스트 / YouTube 링크
 - 관리자 기본 비밀번호: `wpgktkfkdgo0226`
 - Render의 ADMIN_PASSWORD 환경변수도 반드시 같은 값으로 변경
+
+
+## v10.4 변경사항
+- YouTube 자막/가사 수집 기능 완전 제거
+- TensorFlow.js Toxicity 브라우저 AI 제거
+- 곡 제목 + 가수명으로 Apple/iTunes 공개 음원 카탈로그 검색
+- 한국 곡은 KR 카탈로그를 우선 검색하고, 해외 곡은 US 카탈로그까지 함께 검색
+- Explicit 표시 곡 자동 차단
+- Cleaned 표시 곡은 원곡에 Explicit 버전이 있을 수 있어 자동 승인하지 않음
+- 곡 제목/가수/YouTube 영상 제목 자체의 욕설·선정적 키워드도 검사
+- 입력한 곡과 YouTube 영상이 크게 다르면 자동 차단/재확인
+- 별도 AI API 키나 유료 서비스 필요 없음
+
+### 주의
+이 검사는 가사 자체를 읽지 않습니다. 공개 음원 서비스의 Explicit 등급과 메타데이터를 이용하므로
+등급이 누락된 곡까지 100% 판별할 수는 없습니다. 학교 방송용 최종 확인은 관리자가 병행하는 것이 안전합니다.
