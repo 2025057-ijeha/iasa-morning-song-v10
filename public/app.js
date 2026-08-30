@@ -87,7 +87,7 @@ async function inspect(){
 
   checkBtn.disabled=true;
   lastPass=false;
-  setInspect("checking","① YouTube 링크와 영상 정보를 확인하고 있습니다...");
+  setInspect("checking","① YouTube 링크를 확인하고 있습니다...");
   setProgress(1,"active");
 
   try{

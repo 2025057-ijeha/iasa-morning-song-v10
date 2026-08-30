@@ -255,15 +255,8 @@ async function prepareSongInspection(body){
     };
   }
 
-  // 안전한 곡 이름을 적고 전혀 다른 YouTube 영상을 연결하는 것을 방지
-  const youtubeTitleScore=textSimilarity(songTitle,meta.title);
-  if(youtubeTitleScore<0.42){
-    return {
-      ok:false,status:"review",stage:"youtube-match",
-      message:"입력한 곡 제목과 YouTube 영상 제목이 충분히 일치하지 않습니다.",
-      detail:"해당 곡의 공식 오디오·뮤직비디오·가사 영상 링크로 다시 입력해주세요."
-    };
-  }
+  // YouTube 제목은 업로더마다 표기가 크게 달라질 수 있으므로
+  // 제목 유사도만으로 신청을 차단하지 않습니다. 영상 존재 여부와 메타데이터 금지어만 확인합니다.
 
   const catalog=await findCatalogSong(songTitle,artistName);
   if(!catalog.best){
